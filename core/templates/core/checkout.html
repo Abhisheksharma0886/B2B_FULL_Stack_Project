@@ -1,0 +1,122 @@
+{% extends 'core/base.html' %}
+{% block title %}Checkout | SCM B2P Portal{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-8">
+        
+        <!-- Navigation Breadcrumb back to Dashboard -->
+        <div class="mb-4">
+            <a href="{% url 'dashboard' %}" class="text-secondary text-decoration-none">
+                <i class="fa-solid fa-arrow-left me-1"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <div class="glass-card p-4">
+            <h2 class="text-light brand-font border-bottom border-secondary pb-3 mb-4">
+                <i class="fa-solid fa-cash-register text-info me-2"></i>Secure Order Checkout
+            </h2>
+
+            <div class="row g-4">
+                <!-- Product Review Column -->
+                <div class="col-md-5">
+                    <div class="bg-dark p-3 rounded border border-secondary mb-3">
+                        <div class="text-center mb-3" style="max-height: 180px; overflow: hidden; border-radius: 8px;">
+                            {% if product.image1 %}
+                                <img src="{{ product.image1.url }}" alt="{{ product.name }}" style="max-width: 100%; height: auto; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-secondary text-center text-light py-5"><i class="fa-solid fa-image fs-1 opacity-25"></i></div>
+                            {% endif %}
+                        </div>
+                        <h5 class="text-light">{{ product.name }}</h5>
+                        <p class="text-secondary small mb-3">{{ product.description }}</p>
+                        
+                        <div class="border-top border-secondary pt-2 mt-2">
+                            <div class="d-flex justify-content-between small text-secondary">
+                                <span>Original Price:</span>
+                                <span>₹{{ product.price }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between small text-secondary">
+                                <span>Offer Discount:</span>
+                                <span class="text-danger">-{{ product.offer_percentage }}%</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold text-info fs-5 mt-1 pt-1 border-top border-dashed">
+                                <span>Unit Price:</span>
+                                <span>₹{{ product.discounted_price }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Selection Column -->
+                <div class="col-md-7">
+                    <form method="POST" id="checkout-form">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Vendor Seller</label>
+                            <input type="text" class="form-control" value="{{ product.vendor.username }} ({{ product.vendor.email }})" disabled>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-warning">Quantity to Purchase</label>
+                            {{ form.quantity }}
+                            <div class="form-text text-secondary">Max Available Stock: {{ product.available_quantity }} items</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Payment Method Selection</label>
+                            {{ form.payment_method }}
+                            <div class="form-text text-secondary">Note: Currently, cash is the only active payment workflow available in this system.</div>
+                        </div>
+
+                        <!-- Price calculation summary dynamic -->
+                        <div class="bg-dark p-3 rounded border border-secondary mb-4">
+                            <h6 class="text-secondary mb-2">Order Price Summary</h6>
+                            <div class="d-flex justify-content-between text-secondary">
+                                <span>Items Total:</span>
+                                <span>₹<span id="summary-subtotal">{{ product.discounted_price }}</span></span>
+                            </div>
+                            <div class="d-flex justify-content-between text-secondary">
+                                <span>Shipping Fees:</span>
+                                <span class="text-success">FREE Delivery</span>
+                            </div>
+                            <div class="d-flex justify-content-between fw-bold text-light fs-5 mt-2 pt-2 border-top border-secondary">
+                                <span>Total Bill Amount (INR):</span>
+                                <span>₹<span id="summary-total">{{ product.discounted_price }}</span></span>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-gradient-secondary btn-lg w-100">
+                            <i class="fa-solid fa-circle-check me-2"></i>Confirm Purchase
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const qtyInput = document.getElementById("id_quantity");
+        const subtotalSpan = document.getElementById("summary-subtotal");
+        const totalSpan = document.getElementById("summary-total");
+        const unitPrice = parseFloat("{{ product.discounted_price }}");
+        
+        function updateSummary() {
+            let qty = parseInt(qtyInput.value) || 1;
+            if (qty < 1) qty = 1;
+            const total = (qty * unitPrice).toFixed(2);
+            subtotalSpan.textContent = total;
+            totalSpan.textContent = total;
+        }
+
+        qtyInput.addEventListener("input", updateSummary);
+        qtyInput.addEventListener("change", updateSummary);
+    });
+</script>
+{% endblock %}
