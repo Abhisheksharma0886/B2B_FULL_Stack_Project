@@ -1,0 +1,357 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Buyer Dashboard | SCM B2P Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Styling tabs */
+    .nav-tabs {
+        border-bottom: 2px solid var(--border-color);
+    }
+    
+    .nav-link.tab-btn {
+        background: transparent !important;
+        border: none !important;
+        color: var(--text-muted) !important;
+        font-weight: 600;
+        font-size: 1.1rem;
+        padding: 12px 24px;
+        position: relative;
+    }
+    
+    .nav-link.tab-btn.active {
+        color: var(--secondary) !important;
+    }
+    
+    .nav-link.tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--secondary);
+        border-radius: 3px;
+    }
+    
+    /* Stepper tracking design */
+    .stepper-wrapper {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 30px;
+        margin-bottom: 20px;
+        position: relative;
+    }
+    
+    .stepper-wrapper::before {
+        content: '';
+        position: absolute;
+        top: 25px;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: #374151;
+        z-index: 1;
+    }
+    
+    .stepper-progress {
+        position: absolute;
+        top: 25px;
+        left: 0;
+        height: 4px;
+        background: var(--secondary);
+        z-index: 2;
+        transition: width 0.4s ease;
+    }
+    
+    .stepper-item {
+        position: relative;
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 25%;
+    }
+    
+    .step-counter {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: #1f2937;
+        border: 4px solid #374151;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-weight: bold;
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+        font-size: 1.25rem;
+    }
+    
+    .stepper-item.completed .step-counter {
+        background: var(--dark-bg);
+        border-color: var(--secondary);
+        color: var(--secondary);
+        box-shadow: 0 0 15px rgba(20, 184, 166, 0.4);
+    }
+    
+    .stepper-item.active .step-counter {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: white;
+        box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+    }
+    
+    .step-name {
+        margin-top: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-align: center;
+    }
+    
+    .stepper-item.completed .step-name {
+        color: var(--text-main);
+    }
+    
+    .stepper-item.active .step-name {
+        color: var(--primary);
+    }
+
+    .step-timestamp {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    .otp-box {
+        background: rgba(245, 158, 11, 0.08);
+        border: 1px dashed var(--warning);
+        border-radius: 12px;
+        padding: 15px;
+        margin: 15px 0;
+        text-align: center;
+    }
+
+    .otp-code {
+        font-family: 'Outfit', sans-serif;
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--warning);
+        letter-spacing: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="text-light brand-font"><i class="fa-solid fa-cart-flatbed-suitcases text-secondary me-2"></i> Buyer Workspace</h2>
+        <p class="text-secondary">Track your supply chain shipments, view history, and download PDF receipts.</p>
+    </div>
+</div>
+
+<!-- Navigation Tabs -->
+<ul class="nav nav-tabs mb-4" id="buyerTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link tab-btn {% if active_tab == 'products' %}active{% endif %}" href="?tab=products">
+            <i class="fa-solid fa-bag-shopping me-2"></i> Shop Products
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link tab-btn {% if active_tab == 'orders' %}active{% endif %}" href="?tab=orders">
+            <i class="fa-solid fa-list-check me-2"></i> SCM Order Tracking
+        </a>
+    </li>
+</ul>
+
+<!-- Tabs Contents -->
+<div class="tab-content">
+
+    <!-- TAB: Shop Products -->
+    {% if active_tab == 'products' %}
+    <div class="tab-pane fade show active">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="text-light mb-0 brand-font">Shop Products</h4>
+            <form method="GET" action="{% url 'dashboard' %}" class="d-flex gap-2">
+                <input type="hidden" name="tab" value="products">
+                <div class="input-group input-group-sm">
+                    <input type="text" name="search_products" class="form-control bg-dark border-secondary text-light" placeholder="Search products..." value="{{ search_products|default:'' }}">
+                    <button class="btn btn-sm btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+                {% if search_products %}
+                    <a href="?tab=products" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-rotate-left"></i></a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="row g-4">
+            {% if products %}
+                {% for product in products %}
+                    <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                        <div class="glass-card h-100 d-flex flex-direction-column overflow-hidden border border-secondary" style="border-radius: 16px;">
+                            <div style="height: 180px; overflow: hidden; background: #111827; position: relative;">
+                                {% if product.image1 %}
+                                    <img src="{{ product.image1.url }}" alt="{{ product.name }}" style="width:100%; height:100%; object-fit:cover;">
+                                {% else %}
+                                    <div class="w-100 h-100 d-flex align-items-center justify-content-center text-muted">
+                                        <i class="fa-solid fa-image fs-1"></i>
+                                    </div>
+                                {% endif %}
+                                {% if product.offer_percentage > 0 %}
+                                    <span class="badge bg-danger position-absolute top-2 end-2" style="top: 10px; right: 10px;">-{{ product.offer_percentage }}%</span>
+                                {% endif %}
+                            </div>
+                            <div class="p-3 d-flex flex-column flex-grow-1">
+                                <h5 class="text-light mb-1">{{ product.name }}</h5>
+                                <p class="text-secondary small mb-3 text-truncate">{{ product.description }}</p>
+                                <div class="mt-auto d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="text-info fw-bold fs-5">₹{{ product.discounted_price }}</span>
+                                        {% if product.offer_percentage > 0 %}
+                                            <span class="text-muted small text-decoration-line-through ms-1">₹{{ product.price }}</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if product.available_quantity > 0 %}
+                                        <a href="{% url 'checkout' product.id %}" class="btn btn-sm btn-gradient-secondary">
+                                            <i class="fa-solid fa-cart-shopping me-1"></i> Buy
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-sm btn-secondary" disabled>Sold Out</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12 text-center p-5">
+                    <p class="text-secondary">No products available in SCM catalogs.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TAB: Order SCM Tracking -->
+    {% if active_tab == 'orders' %}
+    <div class="tab-pane fade show active">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="text-light mb-0 brand-font">Your Orders</h4>
+            <form method="GET" action="{% url 'dashboard' %}" class="d-flex gap-2">
+                <input type="hidden" name="tab" value="orders">
+                <div class="input-group input-group-sm">
+                    <input type="text" name="search_orders" class="form-control bg-dark border-secondary text-light" placeholder="Search by item, status, order id..." value="{{ search_orders|default:'' }}">
+                    <button class="btn btn-sm btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </div>
+                {% if search_orders %}
+                    <a href="?tab=orders" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-rotate-left"></i></a>
+                {% endif %}
+            </form>
+        </div>
+        {% if orders %}
+            <div class="row g-4">
+                {% for order in orders %}
+                    <div class="col-12">
+                        <div class="glass-card p-4">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h5 class="text-info brand-font mb-1">Order ID: #{{ order.id }}</h5>
+                                    <p class="text-secondary small mb-0">Product: <strong>{{ order.product.name }}</strong> | Qty: <strong>{{ order.quantity }}</strong> | Total Amount: <strong class="text-light">₹{{ order.total_price }}</strong></p>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+                                    <a href="{% url 'generate_receipt_pdf' order.id %}" class="btn btn-sm btn-gradient-primary">
+                                        <i class="fa-solid fa-file-pdf me-1"></i> Download PDF Receipt
+                                    </a>
+                                    <span class="badge {% if order.status == 'delivered' %}bg-success{% else %}bg-warning text-dark{% endif %} px-3 py-2 text-uppercase">
+                                        {{ order.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <hr class="border-secondary my-3">
+
+                            <!-- SCM Timeline -->
+                            <div class="stepper-wrapper">
+                                <!-- Order Confirmed Step -->
+                                <div class="stepper-item completed">
+                                    <div class="step-counter"><i class="fa-solid fa-circle-check"></i></div>
+                                    <div class="step-name">Order Confirmed</div>
+                                    <div class="step-timestamp">{{ order.order_confirmed_at|date:"d M H:i" }}</div>
+                                </div>
+
+                                <!-- Shipped Step -->
+                                <div class="stepper-item {% if order.status == 'shipped' or order.status == 'out_for_delivery' or order.status == 'delivered' %}completed{% elif order.status == 'confirmed' %}active{% endif %}">
+                                    <div class="step-counter">
+                                        {% if order.status == 'shipped' or order.status == 'out_for_delivery' or order.status == 'delivered' %}
+                                            <i class="fa-solid fa-circle-check"></i>
+                                        {% else %}
+                                            2
+                                        {% endif %}
+                                    </div>
+                                    <div class="step-name">Shipped</div>
+                                    <div class="step-timestamp">{% if order.shipped_at %}{{ order.shipped_at|date:"d M H:i" }}{% else %}Pending{% endif %}</div>
+                                </div>
+
+                                <!-- Out For Delivery Step -->
+                                <div class="stepper-item {% if order.status == 'out_for_delivery' or order.status == 'delivered' %}completed{% elif order.status == 'shipped' %}active{% endif %}">
+                                    <div class="step-counter">
+                                        {% if order.status == 'out_for_delivery' or order.status == 'delivered' %}
+                                            <i class="fa-solid fa-circle-check"></i>
+                                        {% else %}
+                                            3
+                                        {% endif %}
+                                    </div>
+                                    <div class="step-name">Out for Delivery</div>
+                                    <div class="step-timestamp">{% if order.out_for_delivery_at %}{{ order.out_for_delivery_at|date:"d M H:i" }}{% else %}Pending{% endif %}</div>
+                                </div>
+
+                                <!-- Delivered Step -->
+                                <div class="stepper-item {% if order.status == 'delivered' %}completed{% elif order.status == 'out_for_delivery' %}active{% endif %}">
+                                    <div class="step-counter">
+                                        {% if order.status == 'delivered' %}
+                                            <i class="fa-solid fa-circle-check"></i>
+                                        {% else %}
+                                            4
+                                        {% endif %}
+                                    </div>
+                                    <div class="step-name">Delivered</div>
+                                    <div class="step-timestamp">{% if order.delivered_at %}{{ order.delivered_at|date:"d M H:i" }}{% else %}Pending{% endif %}</div>
+                                </div>
+                            </div>
+
+                            <!-- OTP Display section for Delivery Agents -->
+                            {% if order.status != 'delivered' %}
+                                <div class="otp-box mt-4">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-7 text-md-start mb-3 mb-md-0">
+                                            <h6 class="text-warning mb-1"><i class="fa-solid fa-key me-2"></i>Handover Security PIN</h6>
+                                            <p class="text-secondary small mb-0">Provide this 6-digit Auto-Generated OTP code to the delivery agent to confirm package receipt and complete delivery.</p>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <div class="otp-code py-1">{{ order.otp }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-success d-flex align-items-center mt-3 py-2">
+                                    <i class="fa-solid fa-circle-check me-2 fs-5"></i>
+                                    <div class="small">This order has been successfully delivered and verified with OTP security.</div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="glass-card text-center p-5">
+                <i class="fa-solid fa-truck-ramp-box fs-1 text-secondary mb-3"></i>
+                <h4 class="text-light">No SCM orders found</h4>
+                <p class="text-secondary">Purchase products from the catalog to trigger active supply chain timelines.</p>
+            </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
