@@ -1,0 +1,298 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Admin Control Panel | SCM B2P Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+    .nav-tabs {
+        border-bottom: 2px solid var(--border-color);
+    }
+    
+    .nav-link.tab-btn {
+        background: transparent !important;
+        border: none !important;
+        color: var(--text-muted) !important;
+        font-weight: 600;
+        font-size: 1.05rem;
+        padding: 12px 20px;
+        position: relative;
+    }
+    
+    .nav-link.tab-btn.active {
+        color: var(--secondary) !important;
+    }
+    
+    .nav-link.tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--secondary);
+        border-radius: 3px;
+    }
+
+    .employee-card-img {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--border-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-12">
+        <h2 class="text-light brand-font"><i class="fa-solid fa-user-shield text-warning me-2"></i> Admin SCM Management</h2>
+        <p class="text-secondary">Exclusive access for system administrators to approve vendors and audit logistics employee accounts.</p>
+    </div>
+</div>
+
+<!-- Admin Action Tabs -->
+<ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link tab-btn {% if active_tab == 'logistic_accounts' %}active{% endif %}" href="?tab=logistic_accounts">
+            <i class="fa-solid fa-people-carry-box me-2"></i> Logistic Accounts
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link tab-btn {% if active_tab == 'vendors' %}active{% endif %}" href="?tab=vendors">
+            <i class="fa-solid fa-industry me-2"></i> Vendor ID
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link tab-btn {% if active_tab == 'create_admin' %}active{% endif %}" href="?tab=create_admin">
+            <i class="fa-solid fa-user-plus me-2"></i> Create Admin ID
+        </a>
+    </li>
+</ul>
+
+<!-- Tabs Content Wrapper -->
+<div class="tab-content">
+
+    <!-- TAB: Logistic Accounts -->
+    {% if active_tab == 'logistic_accounts' %}
+    <div class="tab-pane fade show active">
+        <div class="glass-card p-4">
+            <h4 class="text-light mb-3 brand-font">Logistics Staff Auditing Register</h4>
+            
+            <!-- Filters & Export Excel -->
+            <form method="GET" action="{% url 'dashboard' %}" class="row g-3 mb-4">
+                <input type="hidden" name="tab" value="logistic_accounts">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" name="search_employees" class="form-control bg-dark border-secondary text-light" placeholder="Search by username, email, role..." value="{{ search_employees|default:'' }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="filter_vendor" class="form-select bg-dark border-secondary text-light">
+                        <option value="">-- Filter by Vendor --</option>
+                        {% for v in all_vendors %}
+                            <option value="{{ v.id }}" {% if filter_vendor == v.id|stringformat:"s" %}selected{% endif %}>{{ v.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary px-4"><i class="fa-solid fa-filter me-2"></i>Apply Filters</button>
+                    <a href="?tab=logistic_accounts" class="btn btn-outline-secondary px-3"><i class="fa-solid fa-rotate-left me-2"></i>Reset</a>
+                    <a href="{% url 'export_audit_report_excel' %}?search_employees={{ search_employees|urlencode }}&filter_vendor={{ filter_vendor|urlencode }}" class="btn btn-success px-3 ms-auto">
+                        <i class="fa-solid fa-file-excel me-2"></i>Export Excel
+                    </a>
+                </div>
+            </form>
+
+            {% if employees %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle">
+                        <thead>
+                            <tr class="border-secondary">
+                                <th style="width: 60px;">Image</th>
+                                <th>Username / Email</th>
+                                <th>Logistics Role</th>
+                                <th>Creator Vendor</th>
+                                <th>Status</th>
+                                <th>Plain Password (for debugging)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for emp in employees %}
+                                <tr>
+                                    <td>
+                                        {% if emp.profile_picture %}
+                                            <img src="{{ emp.profile_picture.url }}" alt="Emp" class="employee-card-img">
+                                        {% else %}
+                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" style="width:45px; height:45px;"><i class="fa-solid fa-user text-light"></i></div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong class="text-light">{{ emp.username }}</strong>
+                                        <span class="d-block small text-secondary">{{ emp.email }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ emp.get_role_display }}</span>
+                                    </td>
+                                    <td>
+                                        {% if emp.created_by %}
+                                            <strong class="text-info">{{ emp.created_by.username }}</strong>
+                                        {% else %}
+                                            <span class="text-muted small">None (Created via Admin)</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if not emp.is_approved or emp.created_by and not emp.created_by.is_approved %}
+                                            <span class="badge bg-danger text-uppercase">Waiting for approval</span>
+                                        {% else %}
+                                            <span class="badge bg-success text-uppercase">Approved</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <code class="text-warning font-monospace">{{ emp.raw_password_view|default:"********" }}</code>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center p-5">
+                    <i class="fa-solid fa-users-slash fs-1 text-secondary mb-3"></i>
+                    <h5 class="text-secondary">No logistics employees registered in SCM.</h5>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TAB: Vendor ID Approvals -->
+    {% if active_tab == 'vendors' %}
+    <div class="tab-pane fade show active">
+        <div class="glass-card p-4">
+            <h4 class="text-light mb-3 brand-font">Vendor Approval controls</h4>
+            
+            <!-- Vendor Search -->
+            <form method="GET" action="{% url 'dashboard' %}" class="row g-3 mb-4">
+                <input type="hidden" name="tab" value="vendors">
+                <div class="col-md-6 col-lg-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-dark border-secondary text-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" name="search_vendors" class="form-control bg-dark border-secondary text-light" placeholder="Search by username or email..." value="{{ search_vendors|default:'' }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary px-4"><i class="fa-solid fa-magnifying-glass me-2"></i>Search</button>
+                    <a href="?tab=vendors" class="btn btn-outline-secondary px-3 ms-2"><i class="fa-solid fa-rotate-left me-2"></i>Reset</a>
+                </div>
+            </form>
+
+            {% if vendors %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle">
+                        <thead>
+                            <tr class="border-secondary">
+                                <th style="width: 60px;">Image</th>
+                                <th>Username / Email</th>
+                                <th>Status</th>
+                                <th>Plain Password (for debugging)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vendor in vendors %}
+                                <tr>
+                                    <td>
+                                        {% if vendor.profile_picture %}
+                                            <img src="{{ vendor.profile_picture.url }}" alt="Vendor" class="employee-card-img">
+                                        {% else %}
+                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" style="width:45px; height:45px;"><i class="fa-solid fa-user text-light"></i></div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong class="text-light">{{ vendor.username }}</strong>
+                                        <span class="d-block small text-secondary">{{ vendor.email }}</span>
+                                    </td>
+                                    <td>
+                                        {% if vendor.is_approved %}
+                                            <span class="badge bg-success text-uppercase">Approved</span>
+                                        {% else %}
+                                            <span class="badge bg-danger text-uppercase">Waiting for approval</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <code class="text-warning font-monospace">{{ vendor.raw_password_view|default:"********" }}</code>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            {% if vendor.is_approved %}
+                                                <form method="POST" action="{% url 'admin_disapprove_vendor' vendor.id %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-danger px-3">
+                                                        <i class="fa-solid fa-circle-xmark me-1"></i> Disapprove
+                                                    </button>
+                                                </form>
+                                            {% else %}
+                                                <form method="POST" action="{% url 'admin_approve_vendor' vendor.id %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-success px-3">
+                                                        <i class="fa-solid fa-circle-check me-1"></i> Approve
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center p-5">
+                    <i class="fa-solid fa-industry fs-1 text-secondary mb-3"></i>
+                    <h5 class="text-secondary">No vendors registered in SCM.</h5>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TAB: Create Admin ID -->
+    {% if active_tab == 'create_admin' %}
+    <div class="tab-pane fade show active">
+        <div class="glass-card p-4">
+            <h4 class="text-light mb-3 brand-font">Create New Administrator Account</h4>
+            <p class="text-secondary small">Admins created here will have superuser access, enabling them to approve vendors, review auditing registers, and manage platforms.</p>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <form method="POST" action="{% url 'admin_create_admin' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        {% for field in admin_form %}
+                            <div class="mb-3">
+                                <label for="{{ field.id_for_label }}" class="form-label text-light fw-bold">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.help_text %}
+                                    <div class="form-text text-secondary small">{{ field.help_text }}</div>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <div class="text-danger small mt-1">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                        
+                        <button type="submit" class="btn btn-warning px-4 mt-3">
+                            <i class="fa-solid fa-user-plus me-2"></i> Create Admin Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
