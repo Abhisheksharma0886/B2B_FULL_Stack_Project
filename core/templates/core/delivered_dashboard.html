@@ -1,0 +1,106 @@
+{% extends 'core/base.html' %}
+{% block title %}Delivered Agent Dashboard | SCM B2P Portal{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12 text-center text-md-start">
+        <h2 class="text-light brand-font"><i class="fa-solid fa-house-chimney-user text-success me-2"></i> Delivery Verification Desk</h2>
+        <p class="text-secondary">Perform secure end-customer handovers. Input the 6-digit OTP from the buyer to complete orders.</p>
+    </div>
+</div>
+
+{% if waiting_approval %}
+<div class="glass-card text-center p-5 my-4">
+    <div class="py-4">
+        <i class="fa-solid fa-lock fs-1 text-danger mb-3 animate-pulse"></i>
+        <h3 class="text-light brand-font mb-3">Waiting for approval</h3>
+        <p class="text-secondary mx-auto mb-4" style="max-width: 550px;">
+            The Vendor account associated with this Logistics Employee is currently pending approval / disapproved by the administrator. 
+            All shipping and cargo dispatch operations are suspended.
+        </p>
+        <span class="badge bg-danger py-2 px-3 text-uppercase fw-bold">Status: Waiting for approval</span>
+    </div>
+</div>
+{% else %}
+<div class="row g-4">
+    
+    <!-- Actionable OTP Verification Queue -->
+    <div class="col-lg-8">
+        <div class="glass-card p-4">
+            <h4 class="text-light mb-3 brand-font"><i class="fa-solid fa-shield-halved text-warning me-2"></i>Orders Awaiting OTP Verification</h4>
+            {% if orders %}
+                <div class="table-responsive">
+                    <table class="table table-dark align-middle">
+                        <thead>
+                            <tr class="border-secondary">
+                                <th>Order ID</th>
+                                <th>Buyer & Item Info</th>
+                                <th>Enter 6-Digit OTP</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                                <tr>
+                                    <td><strong>#{{ order.id }}</strong></td>
+                                    <td>
+                                        <div class="small text-secondary">
+                                            Buyer: <strong class="text-light">{{ order.buyer.username }}</strong><br/>
+                                            Product: <strong>{{ order.product.name }}</strong> (Qty: {{ order.quantity }})
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <form method="POST" action="{% url 'verify_otp_and_deliver' order.id %}" id="deliver-form-{{ order.id }}" class="d-flex align-items-center">
+                                            {% csrf_token %}
+                                            <input type="text" name="otp" class="form-control form-control-sm font-monospace text-center fs-5 text-warning" 
+                                                   placeholder="******" maxlength="6" style="width: 120px; letter-spacing: 2px;" required>
+                                        </form>
+                                    </td>
+                                    <td>
+                                        <button type="submit" form="deliver-form-{{ order.id }}" class="btn btn-sm btn-gradient-secondary">
+                                            <i class="fa-solid fa-circle-check me-1"></i> Verify & Deliver
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fa-solid fa-circle-check fs-2 text-success mb-2"></i>
+                    <p class="text-secondary mb-0">No orders currently out for delivery on your run sheet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Completed Handovers Reference -->
+    <div class="col-lg-4">
+        <div class="glass-card p-4">
+            <h4 class="text-light mb-3 brand-font"><i class="fa-solid fa-truck-ramp-box text-success me-2"></i>Successful Deliveries</h4>
+            {% if all_orders %}
+                <div class="list-group list-group-flush bg-transparent">
+                    {% for order in all_orders %}
+                        <div class="list-group-item bg-transparent text-light border-secondary px-0 py-3">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <h6 class="mb-1 text-success">Order #{{ order.id }}</h6>
+                                <small class="text-secondary">{{ order.delivered_at|date:"d M H:i" }}</small>
+                            </div>
+                            <p class="mb-1 small text-secondary">
+                                Buyer: {{ order.buyer.username }}<br/>
+                                Item: {{ order.product.name }} (Qty: {{ order.quantity }})
+                            </p>
+                            <span class="badge bg-success text-uppercase small">Delivered</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-secondary small text-center py-4">No successful handovers completed in this session.</p>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endif %}
+{% endblock %}
