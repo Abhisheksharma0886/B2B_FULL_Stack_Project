@@ -1,0 +1,68 @@
+Step 1: Navigate to the Workspace Directory
+Make sure your terminal is inside the project root directory:
+
+cd "/Users/abhisheksharma/Documents/05 VS Code/16_B2B_Full_Stack"
+
+--------------------------------------------------------------------------
+
+Step 2: Install Required Dependencies
+Ensure the necessary libraries (django, reportlab, and pillow) are installed:
+
+pip install django reportlab pillow
+
+# dont use it is installed in global env
+
+--------------------------------------------------------------------------
+
+Step 3: Run Database Migrations
+Prepare the SQLite database schema:
+
+python3 manage.py makemigrations core && python3 manage.py migrate
+
+--------------------------------------------------------------------------
+
+
+Step 4: Provision Default Superuser Credentials
+Create/verify the default administrator account (admin with password admin123) using the custom setup command in 
+
+setup_admin.py :
+
+python3 manage.py setup_admin
+
+
+--------------------------------------------------------------------------
+
+
+Step 5: Start the Local Development Server
+Launch the development web server:
+
+python3 manage.py runserver
+
+--------------------------------------------------------------------------
+
+
+# new 
+
+
+cd "/path/to/your/project/folder"
+
+python3 --version
+
+brew install python
+
+
+# Virtual environment create karein
+python3 -m venv venv
+
+# Virtual environment activate karein
+source venv/bin/activate
+
+
+pip install django pillow reportlab openpyxl
+
+python3 manage.py makemigrations core
+python3 manage.py migrate
+
+python3 manage.py setup_admin
+
+python3 manage.py runserver
