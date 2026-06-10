@@ -1,0 +1,451 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Vendor Dashboard | SCM B2P Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+    .nav-tabs {
+        border-bottom: 2px solid var(--border-color);
+    }
+    
+    .nav-link.tab-btn {
+        background: transparent !important;
+        border: none !important;
+        color: var(--text-muted) !important;
+        font-weight: 600;
+        font-size: 1.05rem;
+        padding: 12px 20px;
+        position: relative;
+    }
+    
+    .nav-link.tab-btn.active {
+        color: var(--secondary) !important;
+    }
+    
+    .nav-link.tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--secondary);
+        border-radius: 3px;
+    }
+
+    .form-control, .form-select {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid var(--border-color);
+        color: var(--text-main) !important;
+        border-radius: 8px;
+        padding: 10px 14px;
+        transition: all 0.3s;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+    }
+
+    .form-control::placeholder {
+        color: #6b7280;
+    }
+
+    .employee-card-img {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--border-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-8">
+        <h2 class="text-light brand-font"><i class="fa-solid fa-industry text-primary me-2"></i> Vendor Control Panel</h2>
+        <p class="text-secondary">Administer product inventories, track orders, and provision logistics agents.</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        {% if not waiting_approval %}
+        <a href="?tab=employees" class="btn btn-gradient-secondary">
+            <i class="fa-solid fa-user-plus me-1"></i> Create Employee ID
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+{% if waiting_approval %}
+<div class="glass-card text-center p-5 my-4">
+    <div class="py-4">
+        <i class="fa-solid fa-hourglass-half fs-1 text-warning mb-3 animate-pulse"></i>
+        <h3 class="text-light brand-font mb-3">Waiting for approval</h3>
+        <p class="text-secondary mx-auto mb-4" style="max-width: 550px;">
+            Your Vendor account has been successfully created but is currently pending administrator approval. 
+            All logistics workflows, product listings, and workspace dashboards are disabled.
+        </p>
+        <span class="badge bg-warning text-dark py-2 px-3 text-uppercase fw-bold">Status: Waiting for approval</span>
+    </div>
+</div>
+{% else %}
+
+<!-- Vendor Action Tabs -->
+<ul class="nav nav-tabs mb-4" id="vendorTabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link tab-btn {% if active_tab == 'products' %}active{% endif %}" href="?tab=products">
+            <i class="fa-solid fa-boxes-stacked me-2"></i> Manage Products
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link tab-btn {% if active_tab == 'add_product' %}active{% endif %}" href="?tab=add_product">
+            <i class="fa-solid fa-plus-circle me-2"></i> Add Product
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link tab-btn {% if active_tab == 'orders' %}active{% endif %}" href="?tab=orders">
+            <i class="fa-solid fa-clipboard-list me-2"></i> SCM Order Log
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link tab-btn {% if active_tab == 'employees' %}active{% endif %}" href="?tab=employees">
+            <i class="fa-solid fa-users-gear me-2"></i> Logistics Accounts
+        </a>
+    </li>
+</ul>
+
+<!-- Tabs Content Wrapper -->
+<div class="tab-content">
+
+    <!-- TAB: Manage Products -->
+    {% if active_tab == 'products' %}
+    <div class="tab-pane fade show active">
+        <div class="glass-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="text-light mb-0 brand-font">Inventory Catalog</h4>
+                <form method="GET" action="{% url 'dashboard' %}" class="d-flex gap-2">
+                    <input type="hidden" name="tab" value="products">
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="search_products" class="form-control bg-dark border-secondary text-light" placeholder="Search products..." value="{{ search_products|default:'' }}">
+                        <button class="btn btn-sm btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    </div>
+                    {% if search_products %}
+                        <a href="?tab=products" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-rotate-left"></i></a>
+                    {% endif %}
+                </form>
+            </div>
+            {% if products %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle">
+                        <thead>
+                            <tr class="border-secondary">
+                                <th style="width: 80px;">Image</th>
+                                <th>Product Name</th>
+                                <th>Base Price</th>
+                                <th>Offer</th>
+                                <th>Final Price</th>
+                                <th>Stock Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products %}
+                                <tr>
+                                    <td>
+                                        {% if product.image1 %}
+                                            <img src="{{ product.image1.url }}" alt="Img" style="width:50px; height:50px; object-fit:cover; border-radius:6px;">
+                                        {% else %}
+                                            <div class="bg-secondary rounded text-center text-light" style="width:50px; height:50px; line-height:50px;">N/A</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong class="text-light">{{ product.name }}</strong>
+                                        <span class="d-block small text-secondary text-truncate" style="max-width: 300px;">{{ product.description }}</span>
+                                    </td>
+                                    <td>₹{{ product.price }}</td>
+                                    <td>
+                                        {% if product.offer_percentage > 0 %}
+                                            <span class="badge bg-danger">{{ product.offer_percentage }}% Off</span>
+                                        {% else %}
+                                            <span class="text-secondary small">None</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-info fw-bold">₹{{ product.discounted_price }}</td>
+                                    <td>
+                                        {% if product.available_quantity > 0 %}
+                                            <span class="badge bg-success">{{ product.available_quantity }} left</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Out of Stock</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center p-5">
+                    <i class="fa-solid fa-boxes-packing fs-1 text-secondary mb-3"></i>
+                    <h5 class="text-secondary">No products cataloged yet.</h5>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TAB: Add Product -->
+    {% if active_tab == 'add_product' %}
+    <div class="tab-pane fade show active">
+        <div class="glass-card p-4">
+            <h4 class="text-light mb-3 brand-font"><i class="fa-solid fa-plus-circle text-success me-2"></i>Add New Product</h4>
+            <form method="POST" action="{% url 'vendor_add_product' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Product Name</label>
+                        {{ product_form.name }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Price (INR - ₹)</label>
+                        {{ product_form.price }}
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Stock Quantity</label>
+                        {{ product_form.available_quantity }}
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Product Description</label>
+                        {{ product_form.description }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Offer Percentage (Discount)</label>
+                        {{ product_form.offer_percentage }}
+                    </div>
+                    
+                    <div class="col-12 my-3">
+                        <h5 class="text-secondary border-bottom border-secondary pb-2">Product Gallery (5 Images)</h5>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label text-warning">Image 1 (Compulsory Primary)</label>
+                        {{ product_form.image1 }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Image 2</label>
+                        {{ product_form.image2 }}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Image 3</label>
+                        {{ product_form.image3 }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Image 4</label>
+                        {{ product_form.image4 }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Image 5</label>
+                        {{ product_form.image5 }}
+                    </div>
+                </div>
+                <div class="mt-3 text-end">
+                    <button type="submit" class="btn btn-gradient-secondary btn-lg">Publish Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TAB: Order SCM Log -->
+    {% if active_tab == 'orders' %}
+    <div class="tab-pane fade show active">
+        <div class="glass-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="text-light mb-0 brand-font">SCM Orders Tracking Panel</h4>
+                <form method="GET" action="{% url 'dashboard' %}" class="d-flex gap-2">
+                    <input type="hidden" name="tab" value="orders">
+                    <div class="input-group input-group-sm">
+                        <input type="text" name="search_orders" class="form-control bg-dark border-secondary text-light" placeholder="Search orders..." value="{{ search_orders|default:'' }}">
+                        <button class="btn btn-sm btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    </div>
+                    {% if search_orders %}
+                        <a href="?tab=orders" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-rotate-left"></i></a>
+                    {% endif %}
+                </form>
+            </div>
+            {% if orders %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle">
+                        <thead>
+                            <tr class="border-secondary">
+                                <th>Order ID</th>
+                                <th>Buyer Details</th>
+                                <th>Item Ordered</th>
+                                <th>Total Bill</th>
+                                <th>SCM Status</th>
+                                <th>Tracking History Log Timestamps</th>
+                                <th>Invoice</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for order in orders %}
+                                <tr>
+                                    <td><strong>#{{ order.id }}</strong></td>
+                                    <td>
+                                        <div class="small">
+                                            User: <strong>{{ order.buyer.username }}</strong><br/>
+                                            Email: {{ order.buyer.email }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong class="text-light">{{ order.product.name }}</strong>
+                                        <span class="d-block small text-secondary">Qty: {{ order.quantity }}</span>
+                                    </td>
+                                    <td class="text-info fw-bold">₹{{ order.total_price }}</td>
+                                    <td>
+                                        <span class="badge {% if order.status == 'delivered' %}bg-success{% else %}bg-warning text-dark{% endif %} text-uppercase">
+                                            {{ order.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="font-size: 0.8rem; line-height: 1.3;" class="text-secondary">
+                                            Confirmed: {{ order.order_confirmed_at|date:"d/m H:i" }}<br/>
+                                            Shipped: {% if order.shipped_at %}{{ order.shipped_at|date:"d/m H:i" }}{% else %}<span class="text-danger">Pending</span>{% endif %}<br/>
+                                            Out for Delivery: {% if order.out_for_delivery_at %}{{ order.out_for_delivery_at|date:"d/m H:i" }}{% else %}<span class="text-danger">Pending</span>{% endif %}<br/>
+                                            Delivered: {% if order.delivered_at %}{{ order.delivered_at|date:"d/m H:i" }}{% else %}<span class="text-danger">Pending</span>{% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'generate_receipt_pdf' order.id %}" class="btn btn-sm btn-outline-info">
+                                            <i class="fa-solid fa-file-pdf"></i> PDF
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center p-5">
+                    <i class="fa-solid fa-box-open fs-1 text-secondary mb-3"></i>
+                    <h5 class="text-secondary">No customer orders received yet.</h5>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TAB: Logistics Account Provisioning -->
+    {% if active_tab == 'employees' %}
+    <div class="tab-pane fade show active">
+        <div class="row g-4">
+            
+            <!-- Employee Creation Panel -->
+            <div class="col-lg-5">
+                <div class="glass-card p-4">
+                    <h4 class="text-light mb-3 brand-font"><i class="fa-solid fa-user-plus text-info me-2"></i>Create Employee ID</h4>
+                    <form method="POST" action="{% url 'vendor_create_employee' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {% if employee_form.errors %}
+                            <div class="alert alert-danger p-2 small">
+                                {% for field, errors in employee_form.errors.items %}
+                                    <strong>{{ field|title }}:</strong> {{ errors|striptags }}<br/>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Employee Username</label>
+                            {{ employee_form.username }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Employee Email</label>
+                            {{ employee_form.email }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Logistics Role</label>
+                            {{ employee_form.role }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Profile Image (Compulsory Picture)</label>
+                            {{ employee_form.profile_picture }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Login Password</label>
+                            {{ employee_form.password }}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-gradient-primary w-100 mt-2">Provision Employee ID</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Employee Register Table -->
+            <div class="col-lg-7">
+                <div class="glass-card p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="text-light mb-0 brand-font">Logistics Staff Register</h4>
+                        <form method="GET" action="{% url 'dashboard' %}" class="d-flex gap-2">
+                            <input type="hidden" name="tab" value="employees">
+                            <div class="input-group input-group-sm">
+                                <input type="text" name="search_employees" class="form-control bg-dark border-secondary text-light" placeholder="Search employees..." value="{{ search_employees|default:'' }}">
+                                <button class="btn btn-sm btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+                            </div>
+                            {% if search_employees %}
+                                <a href="?tab=employees" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-rotate-left"></i></a>
+                            {% endif %}
+                        </form>
+                    </div>
+                    <p class="text-secondary small">Credentials of active agents to view for testing status updates.</p>
+                    
+                    {% if employees %}
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover align-middle">
+                                <thead>
+                                    <tr class="border-secondary">
+                                        <th style="width: 60px;">Image</th>
+                                        <th>Username</th>
+                                        <th>Logistics Role</th>
+                                        <th>Plain Password (for testing)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for emp in employees %}
+                                        <tr>
+                                            <td>
+                                                {% if emp.profile_picture %}
+                                                    <img src="{{ emp.profile_picture.url }}" alt="Emp" class="employee-card-img">
+                                                {% else %}
+                                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center" style="width:45px; height:45px;"><i class="fa-solid fa-user text-light"></i></div>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <strong class="text-light">{{ emp.username }}</strong>
+                                                <span class="d-block small text-secondary">{{ emp.email }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">{{ emp.get_role_display }}</span>
+                                            </td>
+                                            <td>
+                                                <code class="text-warning font-monospace">{{ emp.raw_password_view|default:"********" }}</code>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center p-5 border border-dashed rounded">
+                            <i class="fa-solid fa-users-slash fs-2 text-secondary mb-2"></i>
+                            <p class="text-secondary mb-0">No SCM logistics accounts registered yet.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endif %}
+{% endblock %}
+
