@@ -1,0 +1,360 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Catalog | SCM B2P Portal{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-card {
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        background: rgba(255, 255, 255, 0.04);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .product-card:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(99, 102, 241, 0.3);
+    }
+
+    .product-img-container {
+        position: relative;
+        height: 220px;
+        background: #111827;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .product-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+
+    .product-card:hover .product-img {
+        transform: scale(1.08);
+    }
+
+    .discount-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: linear-gradient(135deg, var(--danger) 0%, #dc2626 100%);
+        color: white;
+        font-weight: 700;
+        font-size: 0.8rem;
+        padding: 4px 10px;
+        border-radius: 20px;
+        box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+    }
+
+    .stock-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        font-weight: 600;
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        border-radius: 6px;
+        backdrop-filter: blur(8px);
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .product-info {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+
+    .product-price {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--secondary);
+    }
+
+    .product-original-price {
+        font-size: 0.9rem;
+        text-decoration: line-through;
+        color: var(--text-muted);
+        margin-left: 8px;
+    }
+
+    /* Modal Form Customizations */
+    .modal-content {
+        background: #111827;
+        color: var(--text-main);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        backdrop-filter: blur(20px);
+    }
+
+    .modal-header {
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-footer {
+        border-top: 1px solid var(--border-color);
+    }
+
+    .form-control, .form-select {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid var(--border-color);
+        color: var(--text-main) !important;
+        border-radius: 8px;
+        padding: 10px 14px;
+        transition: all 0.3s;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+    }
+
+    .form-control::placeholder {
+        color: #6b7280;
+    }
+
+    .hero-banner {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(20, 184, 166, 0.05) 100%);
+        border: 1px solid var(--border-color);
+        border-radius: 24px;
+        padding: 40px;
+        margin-bottom: 40px;
+        text-align: center;
+        position: relative;
+    }
+
+    .hero-banner h1 {
+        font-weight: 900;
+        font-size: 3rem;
+        letter-spacing: -1px;
+    }
+
+    .hero-banner p {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+    <!-- Welcome Hero -->
+    <div class="hero-banner">
+        <h1 class="mb-3 text-light">Next-Gen SCM & B2P Commerce</h1>
+        <p class="text-secondary fs-5 mb-4">
+            An automated B2P marketplace linking Vendors with Buyers and tracking shipping logs sequentially from [Confirmed] to [Delivered] via OTP security.
+        </p>
+        {% if not user.is_authenticated %}
+            <div class="d-flex justify-content-center gap-3">
+                <button class="btn btn-gradient-primary btn-lg" data-bs-toggle="modal" data-bs-target="#signupModal">
+                    <i class="fa-solid fa-user-plus me-2"></i> Join as Buyer / Vendor
+                </button>
+                <button class="btn btn-outline-light btn-lg" data-bs-toggle="modal" data-bs-target="#loginModal">
+                    <i class="fa-solid fa-right-to-bracket me-2"></i> Sign In
+                </button>
+            </div>
+        {% else %}
+            <a href="{% url 'dashboard' %}" class="btn btn-gradient-primary btn-lg">
+                <i class="fa-solid fa-gauge-high me-2"></i> Access Your SCM Dashboard
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- Product Grid Section -->
+    <h2 class="mb-4 text-light"><i class="fa-solid fa-store text-info me-2"></i> Product Catalog</h2>
+    
+    <div class="row g-4">
+        {% if products %}
+            {% for product in products %}
+                <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+                    <!-- Product Card -->
+                    <div class="product-card {% if not user.is_authenticated %}guest-product-card{% endif %}" 
+                         {% if not user.is_authenticated %}style="cursor: pointer;" onclick="triggerGuestLogin()"{% endif %}>
+                        
+                        <div class="product-img-container">
+                            {% if product.image1 %}
+                                <img src="{{ product.image1.url }}" alt="{{ product.name }}" class="product-img">
+                            {% else %}
+                                <div class="bg-secondary w-100 h-100 d-flex align-items-center justify-content-center text-light">
+                                    <i class="fa-solid fa-image fs-1 opacity-25"></i>
+                                </div>
+                            {% endif %}
+
+                            {% if product.offer_percentage > 0 %}
+                                <div class="discount-badge">-{{ product.offer_percentage }}%</div>
+                            {% endif %}
+
+                            <div class="stock-badge">
+                                {% if product.available_quantity > 0 %}
+                                    Stock: {{ product.available_quantity }}
+                                {% else %}
+                                    <span class="text-danger fw-bold">Out of Stock</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="product-info">
+                            <h5 class="text-light mb-1">{{ product.name }}</h5>
+                            <p class="text-secondary small mb-3 text-truncate">{{ product.description }}</p>
+                            
+                            <div class="mt-auto d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="product-price">₹{{ product.discounted_price }}</span>
+                                    {% if product.offer_percentage > 0 %}
+                                        <span class="product-original-price">₹{{ product.price }}</span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if user.is_authenticated %}
+                                    {% if user.role == 'buyer' %}
+                                        {% if product.available_quantity > 0 %}
+                                            <a href="{% url 'checkout' product.id %}" class="btn btn-sm btn-gradient-secondary">
+                                                <i class="fa-solid fa-cart-shopping me-1"></i> Buy Now
+                                            </a>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-secondary" disabled>Sold Out</button>
+                                        {% endif %}
+                                    {% else %}
+                                        <button class="btn btn-sm btn-outline-secondary" disabled>Buyer Only</button>
+                                    {% endif %}
+                                {% else %}
+                                    <button class="btn btn-sm btn-gradient-primary">
+                                        <i class="fa-solid fa-lock me-1"></i> Unlock
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="glass-card text-center p-5 border border-dashed">
+                    <i class="fa-solid fa-box-open fs-1 text-secondary mb-3"></i>
+                    <h4 class="text-light">No products listed yet</h4>
+                    <p class="text-secondary">Check back soon or register as a Vendor to start listing products!</p>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="loginModalLabel"><i class="fa-solid fa-lock text-info me-2"></i>Sign In to SCM Portal</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{% url 'login' %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="username" class="form-control" placeholder="Enter Username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-control" placeholder="Enter Password" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-gradient-primary">Sign In</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div class="modal fade" id="signupModal" tabindex="-1" aria-labelledby="signupModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="signupModalLabel"><i class="fa-solid fa-user-plus text-info me-2"></i>Create New Account</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="POST" action="{% url 'signup' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        {% if signup_form.errors %}
+                            <div class="alert alert-danger p-2 small">
+                                {% for field, errors in signup_form.errors.items %}
+                                    <strong>{{ field|title }}:</strong> {{ errors|striptags }}<br/>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            {{ signup_form.username }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email Address</label>
+                            {{ signup_form.email }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Account Role (Choose Role)</label>
+                            {{ signup_form.role }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Profile Image (Compulsory Picture)</label>
+                            {{ signup_form.profile_picture }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-control" placeholder="Enter Password" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm Password</label>
+                            <input type="password" name="confirm_password" class="form-control" placeholder="Confirm Password" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-gradient-secondary">Register Account</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Trigger modal for guests on card clicks
+    function triggerGuestLogin() {
+        var myModal = new bootstrap.Modal(document.getElementById('loginModal'), {
+            keyboard: true
+        });
+        myModal.show();
+    }
+
+    // Automatically open modals if views pass errors/redirect signals
+    document.addEventListener("DOMContentLoaded", function() {
+        {% if open_login_modal %}
+            var loginM = new bootstrap.Modal(document.getElementById('loginModal'));
+            loginM.show();
+        {% endif %}
+
+        {% if open_signup_modal %}
+            var signupM = new bootstrap.Modal(document.getElementById('signupModal'));
+            signupM.show();
+        {% endif %}
+    });
+</script>
+{% endblock %}
